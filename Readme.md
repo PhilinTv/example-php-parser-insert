@@ -1,6 +1,3 @@
-##install:
-
-`composer install`
 
 ##use
 
