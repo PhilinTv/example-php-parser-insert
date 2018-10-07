@@ -6,15 +6,18 @@
  * Time: 11:51 PM
  */
 
-namespace App\Rule;
+namespace Sokyrko\DependencyInjector\Rule;
+
+use Sokyrko\DependencyInjector\Config\InjectorConfig;
 
 interface RuleInterface
 {
     /**
-     * @param array $parameters
+     * @param \Sokyrko\DependencyInjector\Config\InjectorConfig $injectorConfig
+     *
      * @return array applying errors
      */
-    public function apply(array $parameters): array;
+    public function apply(InjectorConfig $injectorConfig): array;
 
     /**
      * @return string

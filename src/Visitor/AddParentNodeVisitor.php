@@ -6,7 +6,7 @@
  * Time: 12:42 AM
  */
 
-namespace App\Visitor;
+namespace Sokyrko\DependencyInjector\Visitor;
 
 use PhpParser\Node;
 use PhpParser\NodeVisitorAbstract;

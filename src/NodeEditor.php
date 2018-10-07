@@ -1,8 +1,9 @@
 <?php
 
-namespace App;
+namespace Sokyrko\DependencyInjector;
 
-use App\Rule\RuleInterface;
+use Sokyrko\DependencyInjector\Config\InjectorConfig;
+use Sokyrko\DependencyInjector\Rule\RuleInterface;
 
 class NodeEditor
 {
@@ -20,35 +21,33 @@ class NodeEditor
     }
 
     /**
-     * @param array $config
+     * @param \Sokyrko\DependencyInjector\Config\InjectorConfig $injectorConfig
      *
      * @return array errors
      */
-    public function apply(array $config): array
+    public function apply(InjectorConfig $injectorConfig): array
     {
         $nonAppliedRulesErrors = [];
 
-        foreach ($config['rules'] as $ruleName => $parameters) {
-            $errors = $this->applyRule($ruleName, $parameters);
+        $errors = $this->applyRule($injectorConfig);
 
-            if ($errors !== []) {
-                $nonAppliedRulesErrors[$ruleName] = $errors;
-            }
+        if ($errors !== []) {
+            $nonAppliedRulesErrors[$injectorConfig->getRule()] = $errors;
         }
 
         return $nonAppliedRulesErrors;
     }
 
     /**
-     * @param string $ruleName
-     * @param array $parameters
+     * @param \Sokyrko\DependencyInjector\Config\InjectorConfig $injectorConfig
+     *
      * @return array errors
      */
-    public function applyRule(string $ruleName, array $parameters): array
+    protected function applyRule(InjectorConfig $injectorConfig): array
     {
         foreach ($this->rules as $rule) {
-            if ($rule->getName() === $ruleName) {
-                return $rule->apply($parameters);
+            if ($rule->getName() === $injectorConfig->getRule()) {
+                return $rule->apply($injectorConfig);
             }
         }
 

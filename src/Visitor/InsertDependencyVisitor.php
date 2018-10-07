@@ -6,13 +6,15 @@
  * Time: 1:16 AM
  */
 
-namespace App\Visitor;
+namespace Sokyrko\DependencyInjector\Visitor;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr\ArrayItem;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Name\FullyQualified;
+use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
+use Sokyrko\DependencyInjector\Config\InjectorConfig;
 
 class InsertDependencyVisitor extends NodeVisitorAbstract
 {
@@ -26,50 +28,44 @@ class InsertDependencyVisitor extends NodeVisitorAbstract
     protected $methodName;
 
     /**
-     * @var array
+     * @var \Sokyrko\DependencyInjector\Config\InjectorConfig
      */
-    protected $conditions;
+    protected $injectorConfig;
 
     /**
      * @param string $methodName
-     * @param array $conditions
+     * @param \Sokyrko\DependencyInjector\Config\InjectorConfig $injectorConfig
      */
-    public function __construct(string $methodName, array $conditions)
+    public function __construct(string $methodName, InjectorConfig $injectorConfig)
     {
         $this->methodName = $methodName;
-        $this->conditions = array_merge($this->getDefaultConditions(), $conditions);
-    }
-
-
-    /**
-     * @return array
-     */
-    protected function getDefaultConditions(): array
-    {
-        return [
-            static::CONDITION_AFTER => '',
-            static::CONDITION_BEFORE => '',
-            static::CONDITION_INSTANCE_OF => '',
-        ];
+        $this->injectorConfig = $injectorConfig;
     }
 
     /**
      * @param Node $node
+     *
      * @return array|int|null|Node|Node[]
      */
     public function leaveNode(Node $node)
     {
-        if (!$this->isRequiredArrayItem($node, $this->methodName)) {
+        if ($this->isInsertPositionEnd() && $this->isRequiredArrayExpression($node, $this->methodName)) {
+            /** @var \PhpParser\Node\Expr\Array_ $node */
+            $node->items[] = $this->createArrayItemWithInstanceOf();
+
+            return $node;
+
+        }
+            if (!$this->isRequiredArrayItem($node, $this->methodName)) {
             return null;
         }
 
-        /** @var $node ArrayItem */
         $currentArrayItemDependencyName = $node->value->class->toCodeString();
 
         switch ($currentArrayItemDependencyName) {
-            case $this->conditions[static::CONDITION_BEFORE]:
+            case $this->injectorConfig->getBeforeClassName():
                 return [$this->createArrayItemWithInstanceOf(), $node];
-            case $this->conditions[static::CONDITION_AFTER]:
+            case $this->injectorConfig->getAfterClassName():
                 return [$node, $this->createArrayItemWithInstanceOf()];
         }
 
@@ -77,16 +73,25 @@ class InsertDependencyVisitor extends NodeVisitorAbstract
     }
 
     /**
+     * @return bool
+     */
+    protected function isInsertPositionEnd(): bool
+    {
+        return $this->injectorConfig->getBeforeClassName() === null && $this->injectorConfig->getAfterClassName() === null;
+    }
+
+    /**
      * @return ArrayItem
      */
     protected function createArrayItemWithInstanceOf(): ArrayItem
     {
-        return new ArrayItem(new New_(new FullyQualified($this->conditions[static::CONDITION_INSTANCE_OF])));
+        return new ArrayItem(new New_(new FullyQualified($this->injectorConfig->getInsertInstanceOf())));
     }
 
     /**
      * @param Node $node
      * @param string $methodName
+     *
      * @return bool
      */
     protected function isRequiredArrayItem(Node $node, string $methodName): bool
@@ -118,6 +123,7 @@ class InsertDependencyVisitor extends NodeVisitorAbstract
     /**
      * @param Node $node
      * @param string $methodName
+     *
      * @return bool
      */
     protected function isParentMethodRight(Node $node, string $methodName): bool
@@ -135,6 +141,7 @@ class InsertDependencyVisitor extends NodeVisitorAbstract
 
     /**
      * @param Node $node
+     *
      * @return bool
      */
     protected function isParentReturn(Node $node): bool
